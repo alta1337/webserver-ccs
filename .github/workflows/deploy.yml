@@ -1,0 +1,45 @@
+name: Deploy Flask App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy code to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "."
+          target: "/opt/web_app"
+
+      - name: Inject secrets and restart service
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            echo "[Service]" | sudo tee /etc/systemd/system/web_app.service.d/env.conf
+            echo "Environment=\"DB_HOST=${{ secrets.DB_HOST }}\"" | sudo tee -a /etc/systemd/system/web_app.service.d/env.conf
+            echo "Environment=\"DB_NAME=${{ secrets.DB_NAME }}\"" | sudo tee -a /etc/systemd/system/web_app.service.d/env.conf
+            echo "Environment=\"DB_USER=${{ secrets.DB_USER }}\"" | sudo tee -a /etc/systemd/system/web_app.service.d/env.conf
+            echo "Environment=\"DB_PASS=${{ secrets.DB_PASS }}\"" | sudo tee -a /etc/systemd/system/web_app.service.d/env.conf
+
+            sudo systemctl daemon-reload
+            sudo systemctl restart web_app
+            sudo systemctl status web_app --no-pager
+
