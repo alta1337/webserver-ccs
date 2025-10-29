@@ -13,7 +13,7 @@ def index():
 
     conn = psycopg2.connect(host=host, dbname=dbname, user=user, password=password,options="-c search_path=public")
     cur = conn.cursor()
-    cur.execute("SELECT * FROM cs2_skins;")
+    cur.execute("SELECT * FROM cs2_skins WHERE id=1;")
 
     rows = cur.fetchall()
 
